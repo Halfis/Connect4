@@ -27,23 +27,29 @@ font2 = pygame.font.Font("font/lunchds.ttf", 25)
 
 # Functions
 
+# Create empty array
 def create_board():
     return np.zeros((ROW_COUNT, COLUMN_COUNT))
 
+# Place piece into selected column
 def drop_piece(board, row, col, piece):
     board[row][col] = piece
 
+# Check if the selected column has any empty row
 def is_valid_location(board, col):
     return board[ROW_COUNT-1][col] == 0
 
+# Return the lowest empty row in seleceted column
 def get_next_open_row(board, col):
     for r in range(ROW_COUNT):
         if board[r][col] == 0:
             return r
 
+# Print array
 def print_board(board):
     print(np.flip(board, 0))
 
+# Check if the player placed 4 connected pieces
 def winning_move(board, piece):
     # Check horizontal
     for r in range(ROW_COUNT):
@@ -71,6 +77,7 @@ def winning_move(board, piece):
 
     return False
 
+# Evaluate score for last piece placed
 def evaluate_window(window, piece):
     score = 0
     opp_piece = PLAYER if piece == AI else AI
@@ -90,6 +97,7 @@ def evaluate_window(window, piece):
 
     return score
 
+# Evaluate entire game board
 def score_position(board, piece):
     score = 0
 
@@ -97,21 +105,25 @@ def score_position(board, piece):
     center_count = center_array.count(piece)
     score += center_count * 6
 
+    # Check horizontal
     for r in range(ROW_COUNT):
         for c in range(COLUMN_COUNT - WINDOW_LENGTH + 1):
             window = board[r, c:c+WINDOW_LENGTH]
             score += evaluate_window(window, piece)
 
+    # Check vertical
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT - WINDOW_LENGTH + 1):
             window = board[r:r+WINDOW_LENGTH, c]
             score += evaluate_window(window, piece)
 
+    # Check diagonal (down-right)
     for r in range(ROW_COUNT - WINDOW_LENGTH + 1):
         for c in range(COLUMN_COUNT - WINDOW_LENGTH + 1):
             window = [board[r+i][c+i] for i in range(WINDOW_LENGTH)]
             score += evaluate_window(window, piece)
 
+    # Check diagonal (up-right)
     for r in range(WINDOW_LENGTH - 1, ROW_COUNT):
         for c in range(COLUMN_COUNT - WINDOW_LENGTH + 1):
             window = [board[r-i][c+i] for i in range(WINDOW_LENGTH)]
@@ -119,15 +131,17 @@ def score_position(board, piece):
 
     return score
 
+# Check if the game is won by Player, AI or if the board is full
 def is_terminal_node(board):
     return winning_move(board, PLAYER) or winning_move(board, AI) or len(get_valid_locations(board)) == 0
 
+# Minimax algorithm
 def minimax(board, depth, maximizingPlayer):
     valid_locations = get_valid_locations(board)
     is_terminal = is_terminal_node(board)
 
     if depth == 0 or is_terminal:
-        if is_terminal:
+        if is_terminal: # If the game is over
             if winning_move(board, AI):
                 return (None, 999999999999)
             elif winning_move(board, PLAYER):
@@ -137,6 +151,7 @@ def minimax(board, depth, maximizingPlayer):
         else:
             return (None, score_position(board, AI))
 
+    # AI is trying to place 4 own pieces
     if maximizingPlayer:
         value = -math.inf
         column = random.choice(valid_locations)
@@ -149,7 +164,7 @@ def minimax(board, depth, maximizingPlayer):
                 value = new_score
                 column = col
         return column, value
-    else:
+    else: # AI is trying to block player pieces
         value = math.inf
         column = random.choice(valid_locations)
         for col in valid_locations:
@@ -162,6 +177,7 @@ def minimax(board, depth, maximizingPlayer):
                 column = col
         return column, value
 
+# Find all empty locations for placing piece
 def get_valid_locations(board):
     valid_locations = []
     for col in range(COLUMN_COUNT):
@@ -169,6 +185,7 @@ def get_valid_locations(board):
             valid_locations.append(col)
     return valid_locations
 
+# Pick the best move based on the highest score
 def pick_best_move(board, piece):
     valid_locations = get_valid_locations(board)
     best_col = random.choice(valid_locations)
@@ -183,6 +200,7 @@ def pick_best_move(board, piece):
             best_col = col
     return best_col
 
+# Draw array as game board
 def draw_board(board):
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
@@ -211,26 +229,31 @@ while True:
     if not game_active:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos_x, pos_y = event.pos
-            if game_active:
-                if easy_button_rect.collidepoint(pos_x, pos_y):
-                    print("Easy difficulty selected!")
-                    depth = 2
-                elif medium_button_rect.collidepoint(pos_x, pos_y):
-                    print("Medium difficulty selected!")
-                    depth = 3
-                elif hard_button_rect.collidepoint(pos_x, pos_y):
-                    print("Hard difficulty selected!")
-                    depth = 5
+            if easy_button_rect.collidepoint(pos_x, pos_y):
+                print("Easy difficulty selected!")
+                depth = 2
+                game_active = True
+                turn = random.choice([PLAYER, AI])
+                board = create_board()  # Restarting the game
+            elif medium_button_rect.collidepoint(pos_x, pos_y):
+                print("Medium difficulty selected!")
+                depth = 3
+                game_active = True
+                turn = random.choice([PLAYER, AI])
+                board = create_board()  # Restarting the game
+            elif hard_button_rect.collidepoint(pos_x, pos_y):
+                print("Hard difficulty selected!")
+                depth = 4
+                game_active = True
+                turn = random.choice([PLAYER, AI])
+                board = create_board()  # Restarting the game
 
-            game_active = True
-            turn = random.choice([PLAYER, AI])
-            board = create_board()  # Restarting the game
-
+        # Main menu
         screen.fill("SteelBlue")
         game_title = font.render("CONNECT4", False, "Red")
         game_title_rect = game_title.get_rect(center=(width / 2, 100))
         screen.blit(game_title, game_title_rect)
-        game_author = font2.render("Halfis", False, "Red")
+        game_author = font2.render("Patrik Halfar", False, "Red")
         game_author_rect = game_author.get_rect(center=(width / 2, 150))
         screen.blit(game_author, game_author_rect)
         game_difficulty = font2.render("SELECT GAME DIFFICULTY", False, "Black")
